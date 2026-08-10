@@ -12,11 +12,11 @@ import { Alert } from "@/components/ui/alert";
 import { FileUploadCard } from "@/components/medical/FileUploadCard";
 import { UrgencyBadge } from "@/components/medical/UrgencyBadge";
 import {
-  analyze, generateReport, openReport, downloadReportFile,
+  analyze, generateReport, handleReport,
   saveAnalysisState, loadAnalysisState, clearAnalysisState
 } from "@/lib/api";
 import toast from "react-hot-toast";
-import { ListChecks, Download, FileText, Stethoscope, User, Eye } from "lucide-react";
+import { ListChecks, Download, FileText, Stethoscope, User } from "lucide-react";
 
 type Stage = "idle" | "analyzing" | "done";
 
@@ -65,7 +65,6 @@ export default function NewCombinedCase() {
   );
   const [reportId, setReportId] = useState<number | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
-  const [downloadLoading, setDownloadLoading] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -156,36 +155,21 @@ export default function NewCombinedCase() {
     }
   }
 
-  async function getOrCreateReport(): Promise<number | null> {
-    if (reportId) return reportId;
-    if (!sessionId) return null;
-    const reportData = await generateReport(sessionId);
-    setReportId(reportData.report_id);
-    return reportData.report_id;
-  }
-
-  async function handleView() {
+  async function handleDownload() {
+    if (!sessionId) return;
     setReportLoading(true);
     try {
-      const id = await getOrCreateReport();
-      if (id) openReport(id);
+      let id = reportId;
+      if (!id) {
+        const reportData = await generateReport(sessionId);
+        id = reportData.report_id;
+        setReportId(id);
+      }
+      await handleReport(id!, savedPatientName);
     } catch (err) {
-      toast.error("Failed to open report");
+      toast.error("Failed to get report");
     } finally {
       setReportLoading(false);
-    }
-  }
-
-  async function handleDownload() {
-    setDownloadLoading(true);
-    try {
-      const id = await getOrCreateReport();
-      if (id) await downloadReportFile(id, savedPatientName);
-      toast.success("Report downloaded");
-    } catch (err) {
-      toast.error("Failed to download report");
-    } finally {
-      setDownloadLoading(false);
     }
   }
 
@@ -394,17 +378,10 @@ export default function NewCombinedCase() {
               </Alert>
             )}
 
-            {/* Two buttons — View and Download */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={handleView} disabled={reportLoading}>
-                <Eye size={16} className="mr-2" />
-                {reportLoading ? "Opening..." : "View Report"}
-              </Button>
-              <Button onClick={handleDownload} disabled={downloadLoading}>
-                <Download size={16} className="mr-2" />
-                {downloadLoading ? "Downloading..." : "Download"}
-              </Button>
-            </div>
+            <Button onClick={handleDownload} disabled={reportLoading} className="w-full">
+              <Download size={16} className="mr-2" />
+              {reportLoading ? "Please wait..." : "Download Report"}
+            </Button>
           </div>
         )}
       </div>

@@ -1,22 +1,22 @@
 // ============================================================
 // NexRay AI - API Service
-// All backend calls go through this file.
-// Base URL is set via environment variable.
 // ============================================================
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// ── Get the stored JWT token ──
 export function getToken(): string | null {
   return localStorage.getItem("nexray_token");
 }
 
-// ── Auth headers for protected routes ──
 function authHeaders(): HeadersInit {
   return {
     "Authorization": `Bearer ${getToken()}`,
     "Content-Type": "application/json",
   };
+}
+
+export function isMobile(): boolean {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
 // ══════════════════════════════════════════════
@@ -67,9 +67,7 @@ export async function analyze(file?: File, symptoms?: string, patientName?: stri
 
   const res = await fetch(`${BASE_URL}/analyze/`, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${getToken()}`,
-    },
+    headers: { "Authorization": `Bearer ${getToken()}` },
     body: formData,
   });
   if (!res.ok) throw new Error("Analysis failed");
@@ -112,13 +110,13 @@ export async function generateReport(sessionId: number) {
   return res.json();
 }
 
-// View report in new tab — works on all devices
+// Opens PDF in new tab — used on mobile
 export function openReport(reportId: number) {
   const url = `${BASE_URL}/reports/download/${reportId}?token=${getToken()}`;
   window.open(url, "_blank");
 }
 
-// Download report to device — fetches as blob and triggers download
+// Downloads PDF to machine — used on desktop
 export async function downloadReportFile(reportId: number, patientName?: string) {
   const res = await fetch(`${BASE_URL}/reports/download/${reportId}?token=${getToken()}`);
   if (!res.ok) throw new Error("Download failed");
@@ -138,11 +136,18 @@ export async function downloadReportFile(reportId: number, patientName?: string)
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// Smart download — views on mobile, downloads on desktop
+export async function handleReport(reportId: number, patientName?: string) {
+  if (isMobile()) {
+    openReport(reportId);
+  } else {
+    await downloadReportFile(reportId, patientName);
+  }
+}
+
 export async function listReports() {
   const res = await fetch(`${BASE_URL}/reports/list`, {
-    headers: {
-      "Authorization": `Bearer ${getToken()}`,
-    },
+    headers: { "Authorization": `Bearer ${getToken()}` },
   });
   if (!res.ok) throw new Error("Failed to fetch reports");
   return res.json();
@@ -150,9 +155,7 @@ export async function listReports() {
 
 export async function getStats() {
   const res = await fetch(`${BASE_URL}/reports/stats`, {
-    headers: {
-      "Authorization": `Bearer ${getToken()}`,
-    },
+    headers: { "Authorization": `Bearer ${getToken()}` },
   });
   if (!res.ok) throw new Error("Failed to fetch stats");
   return res.json();

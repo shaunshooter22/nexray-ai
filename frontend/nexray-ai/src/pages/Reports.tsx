@@ -6,9 +6,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { openReport, downloadReportFile, listReports } from "@/lib/api";
+import { handleReport, listReports } from "@/lib/api";
 import toast from "react-hot-toast";
-import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User, Eye } from "lucide-react";
+import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User } from "lucide-react";
 
 interface ReportRow {
   id: number;
@@ -54,17 +54,12 @@ export default function Reports() {
     }
   }
 
-  function handleView(reportId: number) {
-    openReport(reportId);
-  }
-
   async function handleDownload(reportId: number, patientName: string | null) {
     setDownloadingId(reportId);
     try {
-      await downloadReportFile(reportId, patientName ?? undefined);
-      toast.success("Report downloaded");
+      await handleReport(reportId, patientName ?? undefined);
     } catch (err) {
-      toast.error("Failed to download report");
+      toast.error("Failed to get report");
     } finally {
       setDownloadingId(null);
     }
@@ -153,24 +148,14 @@ export default function Reports() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleView(report.id)}
-                  >
-                    <Eye size={14} className="mr-1" />
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleDownload(report.id, report.patient_name)}
-                    disabled={downloadingId === report.id}
-                  >
-                    <Download size={14} className="mr-1" />
-                    {downloadingId === report.id ? "..." : "Save"}
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleDownload(report.id, report.patient_name)}
+                  disabled={downloadingId === report.id}
+                >
+                  <Download size={14} className="mr-1" />
+                  {downloadingId === report.id ? "..." : "Download"}
+                </Button>
               </CardContent>
             </Card>
           ))}
