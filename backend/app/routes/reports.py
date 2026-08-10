@@ -173,10 +173,16 @@ async def download_report(
     report_id: int,
     db: Session = Depends(get_db),
     token: str = Query(None),
-    current_doctor: Doctor = Depends(get_current_doctor)
 ):
-    report = db.query(Report).filter(Report.id == report_id).first()
+    # Verify token from query parameter
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    report = db.query(Report).filter(Report.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
 
