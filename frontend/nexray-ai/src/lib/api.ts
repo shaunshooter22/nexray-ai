@@ -112,20 +112,30 @@ export async function generateReport(sessionId: number) {
   return res.json();
 }
 
-// Opens PDF directly — works on iPhone and Android
+// View report in new tab — works on all devices
 export function openReport(reportId: number) {
   const url = `${BASE_URL}/reports/download/${reportId}?token=${getToken()}`;
   window.open(url, "_blank");
 }
 
-export async function downloadReport(reportId: number): Promise<Blob> {
-  const res = await fetch(`${BASE_URL}/reports/download/${reportId}`, {
-    headers: {
-      "Authorization": `Bearer ${getToken()}`,
-    },
-  });
+// Download report to device — fetches as blob and triggers download
+export async function downloadReportFile(reportId: number, patientName?: string) {
+  const res = await fetch(`${BASE_URL}/reports/download/${reportId}?token=${getToken()}`);
   if (!res.ok) throw new Error("Download failed");
-  return res.blob();
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const clean = patientName
+    ? patientName.replace(/\s+/g, "_").toLowerCase()
+    : `report_${reportId}`;
+  const now = new Date();
+  const formatted = `${now.getDate()}${now.toLocaleString("en", { month: "short" })}${now.getFullYear()}`;
+  a.download = `nexray_${clean}_${formatted}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export async function listReports() {
@@ -146,18 +156,6 @@ export async function getStats() {
   });
   if (!res.ok) throw new Error("Failed to fetch stats");
   return res.json();
-}
-
-export function triggerDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.target = "_blank";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ══════════════════════════════════════════════

@@ -6,9 +6,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { openReport, listReports } from "@/lib/api";
+import { openReport, downloadReportFile, listReports } from "@/lib/api";
 import toast from "react-hot-toast";
-import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User } from "lucide-react";
+import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User, Eye } from "lucide-react";
 
 interface ReportRow {
   id: number;
@@ -37,6 +37,7 @@ export default function Reports() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchReports();
@@ -53,9 +54,20 @@ export default function Reports() {
     }
   }
 
-  function handleOpen(reportId: number) {
+  function handleView(reportId: number) {
     openReport(reportId);
-    toast.success("Report opened");
+  }
+
+  async function handleDownload(reportId: number, patientName: string | null) {
+    setDownloadingId(reportId);
+    try {
+      await downloadReportFile(reportId, patientName ?? undefined);
+      toast.success("Report downloaded");
+    } catch (err) {
+      toast.error("Failed to download report");
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   function formatDate(dateStr: string) {
@@ -141,14 +153,24 @@ export default function Reports() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpen(report.id)}
-                >
-                  <Download size={14} className="mr-2" />
-                  View
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleView(report.id)}
+                  >
+                    <Eye size={14} className="mr-1" />
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleDownload(report.id, report.patient_name)}
+                    disabled={downloadingId === report.id}
+                  >
+                    <Download size={14} className="mr-1" />
+                    {downloadingId === report.id ? "..." : "Save"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
