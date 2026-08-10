@@ -12,7 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { FileUploadCard } from "@/components/medical/FileUploadCard";
 import { UrgencyBadge } from "@/components/medical/UrgencyBadge";
 import {
-  analyze, generateReport, downloadReport, triggerDownload,
+  analyze, generateReport, openReport,
   saveAnalysisState, loadAnalysisState, clearAnalysisState
 } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -158,16 +158,10 @@ export default function NewCombinedCase() {
     setReportLoading(true);
     try {
       const reportData = await generateReport(sessionId);
-      const blob = await downloadReport(reportData.report_id);
-      const clean = savedPatientName
-        ? savedPatientName.replace(/\s+/g, "_").toLowerCase()
-        : `session_${sessionId}`;
-      const now = new Date();
-      const formatted = `${now.getDate()}${now.toLocaleString("en", { month: "short" })}${now.getFullYear()}`;
-      triggerDownload(blob, `nexray_${clean}_${formatted}.pdf`);
-      toast.success("Report downloaded");
+      openReport(reportData.report_id);
+      toast.success("Report opened");
     } catch (err) {
-      toast.error("Failed to download report");
+      toast.error("Failed to open report");
     } finally {
       setReportLoading(false);
     }
@@ -291,7 +285,6 @@ export default function NewCombinedCase() {
 
         {stage === "done" && result && (
           <div className="flex flex-col gap-4">
-
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -381,9 +374,8 @@ export default function NewCombinedCase() {
 
             <Button onClick={handleDownloadReport} disabled={reportLoading} className="w-full">
               <Download size={16} className="mr-2" />
-              {reportLoading ? "Generating report..." : "Download Report"}
+              {reportLoading ? "Opening report..." : "View Report"}
             </Button>
-
           </div>
         )}
       </div>

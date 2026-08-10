@@ -1,13 +1,12 @@
 // ============================================================
 // NexRay AI - Reports Page
-// Shows all generated reports with patient name, type and date.
 // ============================================================
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { downloadReport, triggerDownload, listReports } from "@/lib/api";
+import { openReport, listReports } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User } from "lucide-react";
 
@@ -38,7 +37,6 @@ export default function Reports() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchReports();
@@ -55,22 +53,9 @@ export default function Reports() {
     }
   }
 
-  async function handleDownload(reportId: number, patientName: string | null, date: string) {
-    setDownloadingId(reportId);
-    try {
-      const blob = await downloadReport(reportId);
-      const clean = patientName
-        ? patientName.replace(/\s+/g, "_").toLowerCase()
-        : `session_${reportId}`;
-      const d = new Date(date);
-      const formatted = `${d.getDate()}${d.toLocaleString("en", { month: "short" })}${d.getFullYear()}`;
-      triggerDownload(blob, `nexray_${clean}_${formatted}.pdf`);
-      toast.success("Report downloaded");
-    } catch (err) {
-      toast.error("Failed to download report");
-    } finally {
-      setDownloadingId(null);
-    }
+  function handleOpen(reportId: number) {
+    openReport(reportId);
+    toast.success("Report opened");
   }
 
   function formatDate(dateStr: string) {
@@ -123,7 +108,7 @@ export default function Reports() {
             <FileText size={32} className="text-text-secondary" />
             <p className="text-card-title text-text-primary">No reports yet</p>
             <p className="text-body-sm text-text-secondary">
-              Reports will appear here after you generate them from an analysis.
+              Reports will appear here after you run an analysis.
             </p>
           </CardContent>
         </Card>
@@ -159,11 +144,10 @@ export default function Reports() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleDownload(report.id, report.patient_name, report.created_at)}
-                  disabled={downloadingId === report.id}
+                  onClick={() => handleOpen(report.id)}
                 >
                   <Download size={14} className="mr-2" />
-                  {downloadingId === report.id ? "Downloading..." : "Download"}
+                  View
                 </Button>
               </CardContent>
             </Card>

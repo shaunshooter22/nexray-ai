@@ -112,6 +112,12 @@ export async function generateReport(sessionId: number) {
   return res.json();
 }
 
+// Opens PDF directly — works on iPhone and Android
+export function openReport(reportId: number) {
+  const url = `${BASE_URL}/reports/download/${reportId}?token=${getToken()}`;
+  window.open(url, "_blank");
+}
+
 export async function downloadReport(reportId: number): Promise<Blob> {
   const res = await fetch(`${BASE_URL}/reports/download/${reportId}`, {
     headers: {
@@ -144,17 +150,14 @@ export async function getStats() {
 
 export function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    // On mobile open in new tab instead of download
-    window.open(url, "_blank");
-  } else {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.target = "_blank";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ══════════════════════════════════════════════

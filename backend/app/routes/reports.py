@@ -2,7 +2,7 @@
 # NexRay AI - Report Routes
 # ============================================================
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import PatientSession, Report, Doctor
 from app.services.report_generator import generate_report
 from app.routes.auth import get_current_doctor
+from app.services.auth import verify_token
 import os
 import json
 
@@ -171,6 +172,7 @@ async def get_stats(
 async def download_report(
     report_id: int,
     db: Session = Depends(get_db),
+    token: str = Query(None),
     current_doctor: Doctor = Depends(get_current_doctor)
 ):
     report = db.query(Report).filter(Report.id == report_id).first()
@@ -181,7 +183,6 @@ async def download_report(
     if not os.path.exists(report.report_path):
         raise HTTPException(status_code=404, detail="Report file not found on server")
 
-    # Build meaningful filename using patient name and date
     session = db.query(PatientSession).filter(PatientSession.id == report.session_id).first()
     patient = session.patient_name if session and session.patient_name else f"session_{report.session_id}"
     clean_name = patient.replace(" ", "_").lower()
