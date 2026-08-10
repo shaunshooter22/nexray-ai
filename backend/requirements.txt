@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+pillow
+python-dotenv
+anthropic
+reportlab
+torch
+torchvision
+transformers
+python-jose
+passlib
+bcrypt==4.0.1
