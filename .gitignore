@@ -1,0 +1,9 @@
+backend/.env
+backend/venv/
+backend/__pycache__/
+backend/nexray.db
+backend/uploads/
+frontend/nexray-ai/node_modules/
+frontend/nexray-ai/dist/
+.DS_Store
+*.pyc
