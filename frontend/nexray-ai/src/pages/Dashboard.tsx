@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScanLine, Stethoscope, FileText, Activity } from "lucide-react";
-import { getToken, getDoctor } from "@/lib/api";
+import { getDoctor, getStats } from "@/lib/api";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -35,13 +35,7 @@ export default function Dashboard() {
 
   async function fetchStats() {
     try {
-      const res = await fetch("http://localhost:8000/reports/stats", {
-        headers: {
-          "Authorization": `Bearer ${getToken()}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch stats");
-      const data = await res.json();
+      const data = await getStats();
       setStats(data);
     } catch (err) {
       console.error("Stats fetch failed:", err);
@@ -75,7 +69,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Welcome */}
       <div>
         <h1 className="text-page-title text-text-primary">
           Welcome back, {doctor?.name ?? "Doctor"}
@@ -85,7 +78,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stat cards */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -115,7 +107,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Weekly activity chart */}
       <Card>
         <CardHeader>
           <CardTitle>Weekly activity</CardTitle>

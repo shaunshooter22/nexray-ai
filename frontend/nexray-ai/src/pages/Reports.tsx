@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { downloadReport, triggerDownload, getToken } from "@/lib/api";
+import { downloadReport, triggerDownload, listReports } from "@/lib/api";
 import toast from "react-hot-toast";
 import { Search, Download, FileText, ScanLine, Stethoscope, GitMerge, User } from "lucide-react";
 
@@ -46,13 +46,7 @@ export default function Reports() {
 
   async function fetchReports() {
     try {
-      const res = await fetch("http://localhost:8000/reports/list", {
-        headers: {
-          "Authorization": `Bearer ${getToken()}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch reports");
-      const data = await res.json();
+      const data = await listReports();
       setReports(data);
     } catch (err) {
       setReports([]);
@@ -109,7 +103,6 @@ export default function Reports() {
         </p>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-sm">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
         <Input
@@ -120,7 +113,6 @@ export default function Reports() {
         />
       </div>
 
-      {/* Reports list */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

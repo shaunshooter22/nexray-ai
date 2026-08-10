@@ -136,7 +136,12 @@ export default function XRayAnalysis() {
     try {
       const reportData = await generateReport(sessionId);
       const blob = await downloadReport(reportData.report_id);
-      triggerDownload(blob, `nexray_report_${sessionId}.pdf`);
+      const clean = savedPatientName
+        ? savedPatientName.replace(/\s+/g, "_").toLowerCase()
+        : `session_${sessionId}`;
+      const now = new Date();
+      const formatted = `${now.getDate()}${now.toLocaleString("en", { month: "short" })}${now.getFullYear()}`;
+      triggerDownload(blob, `nexray_${clean}_${formatted}.pdf`);
       toast.success("Report downloaded");
     } catch (err) {
       toast.error("Failed to download report");
@@ -164,7 +169,6 @@ export default function XRayAnalysis() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Upload + patient name */}
         <div className="flex flex-col gap-4">
           {stage === "idle" && (
             <div className="flex flex-col gap-1.5">
@@ -182,8 +186,6 @@ export default function XRayAnalysis() {
           )}
           <FileUploadCard onFileAccepted={handleFile} previewUrl={previewUrl} />
           {stage === "analyzing" && <AnalysisProgress />}
-
-          {/* Show patient name when done */}
           {stage === "done" && savedPatientName && (
             <div className="flex items-center gap-2 text-body-sm text-text-secondary">
               <User size={14} />
@@ -192,7 +194,6 @@ export default function XRayAnalysis() {
           )}
         </div>
 
-        {/* Results */}
         {stage === "done" && result && (
           <div className="flex flex-col gap-4">
 
@@ -283,11 +284,7 @@ export default function XRayAnalysis() {
               </Alert>
             )}
 
-            <Button
-              onClick={handleDownloadReport}
-              disabled={reportLoading}
-              className="w-full"
-            >
+            <Button onClick={handleDownloadReport} disabled={reportLoading} className="w-full">
               <Download size={16} className="mr-2" />
               {reportLoading ? "Generating report..." : "Download Report"}
             </Button>

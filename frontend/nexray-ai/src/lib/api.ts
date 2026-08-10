@@ -1,10 +1,10 @@
 // ============================================================
 // NexRay AI - API Service
 // All backend calls go through this file.
-// The base URL points to the FastAPI backend.
+// Base URL is set via environment variable.
 // ============================================================
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Get the stored JWT token ──
 export function getToken(): string | null {
@@ -57,8 +57,6 @@ export function isLoggedIn(): boolean {
 
 // ══════════════════════════════════════════════
 // COMBINED ANALYSIS
-// Accepts image only, symptoms only, or both
-// Also accepts optional patient name
 // ══════════════════════════════════════════════
 
 export async function analyze(file?: File, symptoms?: string, patientName?: string) {
@@ -80,7 +78,6 @@ export async function analyze(file?: File, symptoms?: string, patientName?: stri
 
 // ══════════════════════════════════════════════
 // REFINE DIAGNOSIS
-// Doctor types test results in plain English
 // ══════════════════════════════════════════════
 
 export async function refineDiagnosis(
@@ -125,6 +122,26 @@ export async function downloadReport(reportId: number): Promise<Blob> {
   return res.blob();
 }
 
+export async function listReports() {
+  const res = await fetch(`${BASE_URL}/reports/list`, {
+    headers: {
+      "Authorization": `Bearer ${getToken()}`,
+    },
+  });
+  if (!res.ok) throw new Error("Failed to fetch reports");
+  return res.json();
+}
+
+export async function getStats() {
+  const res = await fetch(`${BASE_URL}/reports/stats`, {
+    headers: {
+      "Authorization": `Bearer ${getToken()}`,
+    },
+  });
+  if (!res.ok) throw new Error("Failed to fetch stats");
+  return res.json();
+}
+
 export function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -136,7 +153,6 @@ export function triggerDownload(blob: Blob, filename: string) {
 
 // ══════════════════════════════════════════════
 // SESSION STATE PERSISTENCE
-// Saves analysis state so it survives tab switches
 // ══════════════════════════════════════════════
 
 export function saveAnalysisState(state: {

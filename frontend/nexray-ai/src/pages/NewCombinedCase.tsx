@@ -159,7 +159,12 @@ export default function NewCombinedCase() {
     try {
       const reportData = await generateReport(sessionId);
       const blob = await downloadReport(reportData.report_id);
-      triggerDownload(blob, `nexray_report_${sessionId}.pdf`);
+      const clean = savedPatientName
+        ? savedPatientName.replace(/\s+/g, "_").toLowerCase()
+        : `session_${sessionId}`;
+      const now = new Date();
+      const formatted = `${now.getDate()}${now.toLocaleString("en", { month: "short" })}${now.getFullYear()}`;
+      triggerDownload(blob, `nexray_${clean}_${formatted}.pdf`);
       toast.success("Report downloaded");
     } catch (err) {
       toast.error("Failed to download report");
@@ -189,13 +194,9 @@ export default function NewCombinedCase() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {stage === "idle" && (
           <Card>
-            <CardHeader>
-              <CardTitle>Case Details</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Case Details</CardTitle></CardHeader>
             <CardContent>
               <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-
-                {/* Patient name */}
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="patient_name" className="flex items-center gap-2">
                     <User size={14} />
@@ -378,11 +379,7 @@ export default function NewCombinedCase() {
               </Alert>
             )}
 
-            <Button
-              onClick={handleDownloadReport}
-              disabled={reportLoading}
-              className="w-full"
-            >
+            <Button onClick={handleDownloadReport} disabled={reportLoading} className="w-full">
               <Download size={16} className="mr-2" />
               {reportLoading ? "Generating report..." : "Download Report"}
             </Button>
