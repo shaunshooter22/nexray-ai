@@ -108,6 +108,10 @@ export default function NewCombinedCase() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!patientName.trim()) {
+      toast.error("Please enter the patient's name");
+      return;
+    }
     if (!file && !symptoms.trim()) {
       toast.error("Please upload an X-ray or enter symptoms");
       return;
@@ -200,7 +204,7 @@ export default function NewCombinedCase() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="patient_name" className="flex items-center gap-2">
                     <User size={14} />
-                    Patient Name
+                    Patient Name <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <Input
                     id="patient_name"

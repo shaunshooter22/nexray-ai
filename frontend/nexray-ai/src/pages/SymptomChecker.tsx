@@ -96,8 +96,12 @@ export default function SymptomChecker() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!patientName.trim()) {
+      toast.error("Please enter the patient's name");
+      return;
+    }
     if (!symptoms.trim()) {
-      toast.error("Enter symptoms before checking");
+      toast.error("Please enter the patient's symptoms");
       return;
     }
 
@@ -187,7 +191,7 @@ export default function SymptomChecker() {
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="patient_name" className="flex items-center gap-2">
                     <User size={14} />
-                    Patient Name
+                    Patient Name <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <Input
                     id="patient_name"
@@ -242,7 +246,9 @@ export default function SymptomChecker() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="symptoms">Symptoms</Label>
+                  <Label htmlFor="symptoms">
+                    Symptoms <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Textarea
                     id="symptoms"
                     placeholder="Describe the patient's symptoms in plain English..."

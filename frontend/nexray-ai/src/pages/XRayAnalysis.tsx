@@ -94,6 +94,10 @@ export default function XRayAnalysis() {
   }
 
   async function handleFile(f: File) {
+    if (!patientName.trim()) {
+      toast.error("Please enter the patient's name before uploading");
+      return;
+    }
     const base64 = await fileToBase64(f);
     setPreviewUrl(base64);
     setResult(null);
@@ -174,7 +178,7 @@ export default function XRayAnalysis() {
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="patient_name" className="flex items-center gap-2">
                 <User size={14} />
-                Patient Name
+                Patient Name <span className="text-red-500 ml-1">*</span>
               </Label>
               <Input
                 id="patient_name"
@@ -182,6 +186,7 @@ export default function XRayAnalysis() {
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
               />
+              <p className="text-tiny text-text-secondary">Required before uploading</p>
             </div>
           )}
           <FileUploadCard onFileAccepted={handleFile} previewUrl={previewUrl} />
