@@ -1,5 +1,6 @@
 # ============================================================
 # NexRay AI - Report Routes
+# All reports and stats are filtered by the logged in doctor.
 # ============================================================
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -84,7 +85,7 @@ async def generate_session_report(
         "report_id": report.id,
         "session_id": request.session_id,
         "report_path": report_path,
-        "message": "Report generated successfully. Use the download endpoint to get the PDF."
+        "message": "Report generated successfully."
     }
 
 @router.get("/list")
@@ -92,28 +93,29 @@ async def list_reports(
     db: Session = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor)
 ):
+    # Only return reports for sessions created by this doctor
     reports = db.query(Report).order_by(Report.created_at.desc()).all()
     result = []
     for r in reports:
         session = db.query(PatientSession).filter(PatientSession.id == r.session_id).first()
-        if session:
-            if session.xray_findings and session.symptom_findings:
-                analysis_type = "Combined Case"
-            elif session.xray_findings:
-                analysis_type = "X-Ray Analysis"
-            elif session.symptom_findings:
-                analysis_type = "Symptom Check"
-            else:
-                analysis_type = "Analysis"
-            patient_name = session.patient_name
+        if not session:
+            continue
+        # Filter by doctor — skip sessions not belonging to this doctor
+        if session.doctor_id and session.doctor_id != current_doctor.id:
+            continue
+        if session.xray_findings and session.symptom_findings:
+            analysis_type = "Combined Case"
+        elif session.xray_findings:
+            analysis_type = "X-Ray Analysis"
+        elif session.symptom_findings:
+            analysis_type = "Symptom Check"
         else:
             analysis_type = "Analysis"
-            patient_name = None
 
         result.append({
             "id": r.id,
             "session_id": r.session_id,
-            "patient_name": patient_name,
+            "patient_name": session.patient_name,
             "analysis_type": analysis_type,
             "report_path": r.report_path,
             "created_at": r.created_at,
@@ -125,20 +127,31 @@ async def get_stats(
     db: Session = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor)
 ):
+    # Only count sessions belonging to this doctor
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
 
     xray_count = db.query(PatientSession).filter(
+        PatientSession.doctor_id == current_doctor.id,
         PatientSession.xray_findings != None,
         PatientSession.created_at >= week_ago
     ).count()
 
     symptom_count = db.query(PatientSession).filter(
+        PatientSession.doctor_id == current_doctor.id,
         PatientSession.symptom_findings != None,
         PatientSession.created_at >= week_ago
     ).count()
 
-    report_count = db.query(Report).count()
+    # Count reports for this doctor's sessions
+    doctor_session_ids = [
+        s.id for s in db.query(PatientSession).filter(
+            PatientSession.doctor_id == current_doctor.id
+        ).all()
+    ]
+    report_count = db.query(Report).filter(
+        Report.session_id.in_(doctor_session_ids)
+    ).count() if doctor_session_ids else 0
 
     activity = []
     for i in range(6, -1, -1):
@@ -146,11 +159,13 @@ async def get_stats(
         day_start = day.replace(hour=0, minute=0, second=0)
         day_end = day.replace(hour=23, minute=59, second=59)
         day_xray = db.query(PatientSession).filter(
+            PatientSession.doctor_id == current_doctor.id,
             PatientSession.xray_findings != None,
             PatientSession.created_at >= day_start,
             PatientSession.created_at <= day_end
         ).count()
         day_symptom = db.query(PatientSession).filter(
+            PatientSession.doctor_id == current_doctor.id,
             PatientSession.symptom_findings != None,
             PatientSession.created_at >= day_start,
             PatientSession.created_at <= day_end
@@ -174,7 +189,6 @@ async def download_report(
     db: Session = Depends(get_db),
     token: str = Query(None),
 ):
-    # Verify token from query parameter
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 

@@ -1,9 +1,8 @@
 # ============================================================
 # NexRay AI - Combined Route
 # Accepts optional X-ray image, optional symptoms and optional
-# patient name. Claude analyses whatever is provided.
-# Auto-generates a report for every session so it appears
-# in the Reports tab immediately.
+# patient name. Saves doctor_id to link session to doctor.
+# Auto-generates a report for every session.
 # ============================================================
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
@@ -60,8 +59,9 @@ async def combined_analysis(
     analysis_basis = findings.get("analysis_basis", "Unknown")
     body_region = findings.get("body_region")
 
-    # Save session
+    # Save session with doctor_id
     session = PatientSession(
+        doctor_id=current_doctor.id,
         patient_name=patient_name,
         xray_path=file_path,
         xray_region=body_region,
@@ -73,7 +73,7 @@ async def combined_analysis(
     db.commit()
     db.refresh(session)
 
-    # Auto-generate report so it appears in Reports tab immediately
+    # Auto-generate report
     try:
         xray_findings = json.loads(session.xray_findings) if session.xray_findings else None
         symptom_findings = json.loads(session.symptom_findings) if session.symptom_findings else None

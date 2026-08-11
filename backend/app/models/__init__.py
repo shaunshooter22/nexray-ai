@@ -10,7 +10,8 @@ class PatientSession(Base):
     __tablename__ = "patient_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_name = Column(String, nullable=True)  # Patient name added by doctor
+    doctor_id = Column(Integer, nullable=True)  # Links session to the doctor who created it
+    patient_name = Column(String, nullable=True)
     xray_path = Column(String, nullable=True)
     xray_region = Column(String, nullable=True)
     xray_findings = Column(Text, nullable=True)
