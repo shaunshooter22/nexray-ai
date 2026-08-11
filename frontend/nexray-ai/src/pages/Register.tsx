@@ -1,7 +1,6 @@
 // ============================================================
 // NexRay AI - Register Page
 // Allows new doctors to create an account.
-// Requires full name, email, password and medical licence number.
 // ============================================================
 
 import { useState } from "react";
@@ -27,6 +26,10 @@ export default function Register() {
     e.preventDefault();
     if (!form.full_name || !form.email || !form.password || !form.licence_number) {
       toast.error("Please fill in all fields");
+      return;
+    }
+    if (form.licence_number.length !== 7 || !/^\d+$/.test(form.licence_number)) {
+      toast.error("Medical licence number must be exactly 7 digits");
       return;
     }
     setLoading(true);
@@ -104,11 +107,15 @@ export default function Register() {
           id="licence_number"
           name="licence_number"
           type="text"
-          placeholder="GH-MED-2026-001"
+          inputMode="numeric"
+          pattern="\d{7}"
+          maxLength={7}
+          placeholder="e.g. 1234567"
           value={form.licence_number}
           onChange={handleChange}
           className="h-10 rounded-md border border-border px-3 text-body-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         />
+        <p className="text-tiny text-text-secondary">Must be exactly 7 digits</p>
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={loading}>
