@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScanLine, Stethoscope, FileText, Activity } from "lucide-react";
+import { ScanLine, Stethoscope, FileText, Activity, GitMerge } from "lucide-react";
 import { getDoctor, getStats } from "@/lib/api";
 import {
   ResponsiveContainer,
@@ -20,16 +20,15 @@ import {
 interface Stats {
   xray_count: number;
   symptom_count: number;
+  combined_count: number;
   report_count: number;
-  activity: { day: string; analyses: number; symptoms: number }[];
+  activity: { day: string; analyses: number; symptoms: number; combined: number }[];
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const doctor = getDoctor();
-
-  // Get first name only for mobile
   const firstName = doctor?.name?.split(" ")[0] ?? "Doctor";
 
   useEffect(() => {
@@ -61,22 +60,21 @@ export default function Dashboard() {
       icon: Stethoscope,
     },
     {
+      label: "Combined Cases",
+      sublabel: "this week",
+      value: stats?.combined_count ?? 0,
+      icon: GitMerge,
+    },
+    {
       label: "Reports",
       sublabel: "generated",
       value: stats?.report_count ?? 0,
       icon: FileText,
     },
-    {
-      label: "Model Uptime",
-      sublabel: "all time",
-      value: "99.9%",
-      icon: Activity,
-    },
   ];
 
   return (
     <div className="flex flex-col gap-4 p-1">
-      {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary leading-tight">
           Welcome back, {firstName}
@@ -86,7 +84,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stat cards — 2 columns on mobile, 4 on desktop */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
@@ -119,7 +116,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Weekly activity chart */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Weekly activity</CardTitle>
@@ -142,6 +138,10 @@ export default function Dashboard() {
                     <stop offset="5%" stopColor="#2E86AB" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#2E86AB" stopOpacity={0} />
                   </linearGradient>
+                  <linearGradient id="combined" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                  </linearGradient>
                 </defs>
                 <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -162,6 +162,14 @@ export default function Dashboard() {
                   fillOpacity={1}
                   fill="url(#symptoms)"
                   name="Symptoms"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="combined"
+                  stroke="#8B5CF6"
+                  fillOpacity={1}
+                  fill="url(#combined)"
+                  name="Combined"
                 />
               </AreaChart>
             </ResponsiveContainer>

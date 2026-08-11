@@ -93,14 +93,12 @@ async def list_reports(
     db: Session = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor)
 ):
-    # Only return reports for sessions created by this doctor
     reports = db.query(Report).order_by(Report.created_at.desc()).all()
     result = []
     for r in reports:
         session = db.query(PatientSession).filter(PatientSession.id == r.session_id).first()
         if not session:
             continue
-        # Filter by doctor — skip sessions not belonging to this doctor
         if session.doctor_id and session.doctor_id != current_doctor.id:
             continue
         if session.xray_findings and session.symptom_findings:
@@ -127,58 +125,86 @@ async def get_stats(
     db: Session = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor)
 ):
-    # Only count sessions belonging to this doctor
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
 
+    # All sessions for this doctor
+    doctor_sessions = db.query(PatientSession).filter(
+        PatientSession.doctor_id == current_doctor.id
+    ).all()
+    doctor_session_ids = [s.id for s in doctor_sessions]
+
+    # X-ray only sessions this week
     xray_count = db.query(PatientSession).filter(
         PatientSession.doctor_id == current_doctor.id,
         PatientSession.xray_findings != None,
+        PatientSession.symptom_findings == None,
         PatientSession.created_at >= week_ago
     ).count()
 
+    # Symptom only sessions this week
     symptom_count = db.query(PatientSession).filter(
         PatientSession.doctor_id == current_doctor.id,
+        PatientSession.symptom_findings != None,
+        PatientSession.xray_findings == None,
+        PatientSession.created_at >= week_ago
+    ).count()
+
+    # Combined sessions this week
+    combined_count = db.query(PatientSession).filter(
+        PatientSession.doctor_id == current_doctor.id,
+        PatientSession.xray_findings != None,
         PatientSession.symptom_findings != None,
         PatientSession.created_at >= week_ago
     ).count()
 
-    # Count reports for this doctor's sessions
-    doctor_session_ids = [
-        s.id for s in db.query(PatientSession).filter(
-            PatientSession.doctor_id == current_doctor.id
-        ).all()
-    ]
+    # Total reports for this doctor
     report_count = db.query(Report).filter(
         Report.session_id.in_(doctor_session_ids)
     ).count() if doctor_session_ids else 0
 
+    # Weekly activity for chart
     activity = []
     for i in range(6, -1, -1):
         day = now - timedelta(days=i)
         day_start = day.replace(hour=0, minute=0, second=0)
         day_end = day.replace(hour=23, minute=59, second=59)
+
         day_xray = db.query(PatientSession).filter(
             PatientSession.doctor_id == current_doctor.id,
             PatientSession.xray_findings != None,
+            PatientSession.symptom_findings == None,
             PatientSession.created_at >= day_start,
             PatientSession.created_at <= day_end
         ).count()
+
         day_symptom = db.query(PatientSession).filter(
             PatientSession.doctor_id == current_doctor.id,
+            PatientSession.symptom_findings != None,
+            PatientSession.xray_findings == None,
+            PatientSession.created_at >= day_start,
+            PatientSession.created_at <= day_end
+        ).count()
+
+        day_combined = db.query(PatientSession).filter(
+            PatientSession.doctor_id == current_doctor.id,
+            PatientSession.xray_findings != None,
             PatientSession.symptom_findings != None,
             PatientSession.created_at >= day_start,
             PatientSession.created_at <= day_end
         ).count()
+
         activity.append({
             "day": day.strftime("%a"),
             "analyses": day_xray,
             "symptoms": day_symptom,
+            "combined": day_combined,
         })
 
     return {
         "xray_count": xray_count,
         "symptom_count": symptom_count,
+        "combined_count": combined_count,
         "report_count": report_count,
         "activity": activity,
     }
