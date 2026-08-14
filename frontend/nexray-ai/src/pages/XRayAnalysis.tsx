@@ -11,12 +11,13 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  analyze, generateReport, handleReport,
+  analyze, generateReport, handleReport, refineDiagnosis,
   saveAnalysisState, loadAnalysisState, clearAnalysisState
 } from "@/lib/api";
 import toast from "react-hot-toast";
-import { ListChecks, Download, FileText, User } from "lucide-react";
+import { ListChecks, Download, FileText, User, FlaskConical, CheckCircle, XCircle } from "lucide-react";
 
 type Stage = "idle" | "analyzing" | "done";
 
@@ -60,6 +61,9 @@ export default function XRayAnalysis() {
   );
   const [reportId, setReportId] = useState<number | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [testResults, setTestResults] = useState("");
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refinedDiagnosis, setRefinedDiagnosis] = useState<any>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -90,6 +94,8 @@ export default function XRayAnalysis() {
     setSessionId(null);
     setSavedPatientName("");
     setReportId(null);
+    setTestResults("");
+    setRefinedDiagnosis(null);
     setStage("idle");
   }
 
@@ -133,6 +139,25 @@ export default function XRayAnalysis() {
       toast.error("Analysis failed. Please try again.");
       setStage("idle");
       clearAnalysisState();
+    }
+  }
+
+  async function handleRefine() {
+    if (!testResults.trim()) {
+      toast.error("Please enter the test results first");
+      return;
+    }
+    if (!sessionId) return;
+    setRefineLoading(true);
+    try {
+      const data = await refineDiagnosis(sessionId, testResults, "xray");
+      setRefinedDiagnosis(data.refined_diagnosis);
+      setReportId(null); // reset so next download includes refined diagnosis
+      toast.success("Diagnosis refined successfully");
+    } catch (err) {
+      toast.error("Failed to refine diagnosis");
+    } finally {
+      setRefineLoading(false);
     }
   }
 
@@ -286,6 +311,86 @@ export default function XRayAnalysis() {
                   {result.overall_impression}
                 </p>
               </Alert>
+            )}
+
+            {/* Optional test results refine section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FlaskConical size={18} />
+                  Refine Diagnosis with Test Results
+                  <span className="text-tiny font-normal text-text-secondary ml-1">(optional)</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-body-sm text-text-secondary">
+                  If the recommended tests have been carried out, enter the results below in plain English. NexRay AI will narrow down to a confirmed diagnosis.
+                </p>
+                <Textarea
+                  placeholder="e.g. Blood culture showed Salmonella. Malaria RDT negative. WBC elevated at 14,000..."
+                  rows={3}
+                  value={testResults}
+                  onChange={(e) => setTestResults(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleRefine}
+                  disabled={refineLoading || !testResults.trim()}
+                >
+                  <FlaskConical size={15} className="mr-2" />
+                  {refineLoading ? "Refining..." : "Refine Diagnosis"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Refined diagnosis results */}
+            {refinedDiagnosis && (
+              <Card className="border-green-200">
+                <CardHeader>
+                  <CardTitle className="text-green-700">Refined Diagnosis</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  {refinedDiagnosis.final_diagnosis && (
+                    <div className="p-3 rounded-md bg-green-50 border border-green-200">
+                      <p className="text-body-sm font-bold text-green-800">
+                        Final Diagnosis: {refinedDiagnosis.final_diagnosis}
+                      </p>
+                    </div>
+                  )}
+
+                  {refinedDiagnosis.confirmed_conditions?.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-body-sm font-medium text-green-700 flex items-center gap-1">
+                        <CheckCircle size={15} /> Confirmed
+                      </p>
+                      {refinedDiagnosis.confirmed_conditions.map((c: any, i: number) => (
+                        <div key={i} className="text-body-sm text-text-primary pl-5">
+                          <span className="font-medium">{c.condition}</span>
+                          {c.evidence && <span className="text-text-secondary"> — {c.evidence}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {refinedDiagnosis.ruled_out?.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-body-sm font-medium text-red-600 flex items-center gap-1">
+                        <XCircle size={15} /> Ruled Out
+                      </p>
+                      {refinedDiagnosis.ruled_out.map((r: any, i: number) => (
+                        <div key={i} className="text-body-sm text-text-secondary pl-5">
+                          <span className="font-medium text-text-primary">{r.condition}</span>
+                          {r.reason && <span> — {r.reason}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {refinedDiagnosis.summary && (
+                    <p className="text-body-sm text-text-secondary italic">{refinedDiagnosis.summary}</p>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             <Button onClick={handleDownload} disabled={reportLoading} className="w-full">
