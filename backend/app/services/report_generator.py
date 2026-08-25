@@ -185,7 +185,7 @@ def generate_report(session_id: int, patient_name: str = None,
         content.append(Spacer(1, 4))
 
         region     = xray_findings.get("body_region", xray_findings.get("region", "Unknown")).title()
-        findings   = xray_findings.get("findings", [])
+        findings   = xray_findings.get("findings", xray_findings.get("possible_conditions", []))
         summary    = xray_findings.get("overall_impression", xray_findings.get("summary", ""))
         tests      = xray_findings.get("recommended_tests", [])
         treatments = xray_findings.get("suggested_treatment", [])
