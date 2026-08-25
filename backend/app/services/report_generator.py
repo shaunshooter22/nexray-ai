@@ -1,8 +1,5 @@
 # ============================================================
 # NexRay AI - Report Generator
-# Generates a professional single-page PDF clinical report
-# combining xray findings, symptom analysis, and refined
-# diagnosis after test results are submitted.
 # ============================================================
 
 from reportlab.lib.pagesizes import A4
@@ -17,7 +14,6 @@ import os
 REPORTS_FOLDER = "uploads/reports"
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 
-# ── Colours ──
 NAVY       = colors.HexColor("#1A3C5E")
 BLUE       = colors.HexColor("#2E86AB")
 LIGHT_BLUE = colors.HexColor("#EAF4FB")
@@ -40,56 +36,42 @@ def _styles():
         "title": ParagraphStyle("rTitle",
             fontSize=26, textColor=NAVY, alignment=TA_CENTER,
             fontName="Helvetica-Bold", spaceAfter=2, leading=30),
-
         "subtitle": ParagraphStyle("rSub",
             fontSize=9, textColor=BLUE, alignment=TA_CENTER,
             fontName="Helvetica", spaceAfter=2, leading=12),
-
         "date": ParagraphStyle("rDate",
             fontSize=8, textColor=GRAY, alignment=TA_CENTER,
             fontName="Helvetica", spaceAfter=0, leading=11),
-
         "section": ParagraphStyle("rSection",
             fontSize=10, textColor=WHITE, fontName="Helvetica-Bold",
             spaceBefore=0, spaceAfter=0, leading=13),
-
         "body": ParagraphStyle("rBody",
             fontSize=9, textColor=DARK, fontName="Helvetica",
             spaceAfter=2, leading=13),
-
         "bold": ParagraphStyle("rBold",
             fontSize=9, textColor=DARK, fontName="Helvetica-Bold",
             spaceAfter=2, leading=13),
-
         "small": ParagraphStyle("rSmall",
             fontSize=8, textColor=GRAY, fontName="Helvetica",
             spaceAfter=2, leading=11),
-
         "confirmed": ParagraphStyle("rConfirmed",
             fontSize=9, textColor=CONFIRMED, fontName="Helvetica-Bold",
             spaceAfter=2, leading=13),
-
         "ruled_out": ParagraphStyle("rRuledOut",
             fontSize=9, textColor=RULED_OUT, fontName="Helvetica-Bold",
             spaceAfter=2, leading=13),
-
         "final_diagnosis": ParagraphStyle("rFinal",
             fontSize=10, textColor=NAVY, fontName="Helvetica-Bold",
             spaceAfter=3, leading=14),
-
         "disclaimer": ParagraphStyle("rDisclaimer",
             fontSize=7, textColor=RED, fontName="Helvetica-Oblique",
             alignment=TA_JUSTIFY, spaceAfter=0, leading=9),
-
         "urgency_emergency": ParagraphStyle("rUrgE",
             fontSize=9, textColor=RED, fontName="Helvetica-Bold", spaceAfter=2),
-
         "urgency_urgent": ParagraphStyle("rUrgU",
             fontSize=9, textColor=ORANGE, fontName="Helvetica-Bold", spaceAfter=2),
-
         "urgency_routine": ParagraphStyle("rUrgR",
             fontSize=9, textColor=GREEN, fontName="Helvetica-Bold", spaceAfter=2),
-
         "footer": ParagraphStyle("rFooter",
             fontSize=7, textColor=GRAY, alignment=TA_CENTER,
             fontName="Helvetica", spaceAfter=0),
@@ -109,6 +91,33 @@ def _section_header(title, width, S, color=None):
         ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
         ("TOPPADDING",    (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    return t
+
+
+def _findings_table(findings, W, S, BORDER, LIGHT_BLUE, WHITE, NAVY):
+    tdata = [[
+        Paragraph("<b>Possible Condition</b>", S["bold"]),
+        Paragraph("<b>Confidence</b>", S["bold"])
+    ]]
+    for f in findings:
+        confidence = f.get("confidence", "—")
+        conf_str = f"{confidence}%" if isinstance(confidence, (int, float)) else str(confidence)
+        tdata.append([
+            Paragraph(f.get("condition", "—"), S["body"]),
+            Paragraph(conf_str, S["body"])
+        ])
+    t = Table(tdata, colWidths=[W * 0.75, W * 0.25])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",     (0, 0), (-1,  0), NAVY),
+        ("TEXTCOLOR",      (0, 0), (-1,  0), WHITE),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [LIGHT_BLUE, WHITE]),
+        ("GRID",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("ALIGN",          (1, 0), ( 1, -1), "CENTER"),
+        ("LEFTPADDING",    (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",   (0, 0), (-1, -1), 6),
+        ("TOPPADDING",     (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING",  (0, 0), (-1, -1), 4),
     ]))
     return t
 
@@ -143,11 +152,8 @@ def generate_report(session_id: int, patient_name: str = None,
     W       = doc.width
     content = []
 
-    # ══════════════════════════════════════════════
-    # HEADER
-    # ══════════════════════════════════════════════
+    # ── HEADER ──
     date_str = datetime.now().strftime("%d %B %Y  |  %I:%M %p")
-
     content.append(Paragraph("NexRay AI", S["title"]))
     content.append(Paragraph("Medical Assistant Platform  •  Clinical Decision Support Report", S["subtitle"]))
     content.append(Paragraph(date_str, S["date"]))
@@ -155,9 +161,7 @@ def generate_report(session_id: int, patient_name: str = None,
     content.append(HRFlowable(width="100%", thickness=2, color=NAVY))
     content.append(HRFlowable(width="100%", thickness=1, color=BLUE, spaceAfter=4))
 
-    # ══════════════════════════════════════════════
-    # SESSION META BAR
-    # ══════════════════════════════════════════════
+    # ── META BAR ──
     modules_used = _get_modules_used(xray_findings, symptom_findings, refined_diagnosis)
     meta_data = [[
         Paragraph(f"<b>Session ID:</b>  {session_id}", S["small"]),
@@ -177,16 +181,15 @@ def generate_report(session_id: int, patient_name: str = None,
     content.append(meta_table)
     content.append(Spacer(1, 6))
 
-    # ══════════════════════════════════════════════
-    # X-RAY SECTION
-    # ══════════════════════════════════════════════
+    # ── X-RAY SECTION ──
     if xray_findings:
         content.append(_section_header("X-Ray Analysis", W, S))
         content.append(Spacer(1, 4))
 
         region     = xray_findings.get("body_region", xray_findings.get("region", "Unknown")).title()
-        findings   = xray_findings.get("findings", xray_findings.get("possible_conditions", []))
-        summary    = xray_findings.get("overall_impression", xray_findings.get("summary", ""))
+        # Support both findings and possible_conditions field names
+        findings   = xray_findings.get("findings") or xray_findings.get("possible_conditions") or []
+        summary    = xray_findings.get("overall_impression") or xray_findings.get("summary") or ""
         tests      = xray_findings.get("recommended_tests", [])
         treatments = xray_findings.get("suggested_treatment", [])
         next_steps = xray_findings.get("next_steps", [])
@@ -196,30 +199,7 @@ def generate_report(session_id: int, patient_name: str = None,
         content.append(Spacer(1, 3))
 
         if findings:
-            tdata = [[
-                Paragraph("<b>Possible Condition</b>", S["bold"]),
-                Paragraph("<b>Confidence</b>", S["bold"])
-            ]]
-            for f in findings:
-                confidence = f.get("confidence", "—")
-                conf_str = f"{confidence}%" if isinstance(confidence, (int, float)) else str(confidence)
-                tdata.append([
-                    Paragraph(f.get("condition", "—"), S["body"]),
-                    Paragraph(conf_str, S["body"])
-                ])
-            t = Table(tdata, colWidths=[W * 0.75, W * 0.25])
-            t.setStyle(TableStyle([
-                ("BACKGROUND",    (0, 0), (-1,  0), NAVY),
-                ("TEXTCOLOR",     (0, 0), (-1,  0), WHITE),
-                ("ROWBACKGROUNDS",(0, 1), (-1, -1), [LIGHT_BLUE, WHITE]),
-                ("GRID",          (0, 0), (-1, -1), 0.4, BORDER),
-                ("ALIGN",         (1, 0), ( 1, -1), "CENTER"),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-                ("TOPPADDING",    (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]))
-            content.append(t)
+            content.append(_findings_table(findings, W, S, BORDER, LIGHT_BLUE, WHITE, NAVY))
         else:
             content.append(Paragraph("No significant findings detected.", S["body"]))
 
@@ -261,14 +241,13 @@ def generate_report(session_id: int, patient_name: str = None,
 
         content.append(Spacer(1, 6))
 
-    # ══════════════════════════════════════════════
-    # SYMPTOM SECTION
-    # ══════════════════════════════════════════════
+    # ── SYMPTOM SECTION ──
     if symptom_findings:
         content.append(_section_header("Symptom Analysis", W, S))
         content.append(Spacer(1, 4))
 
-        possible_conditions = symptom_findings.get("possible_conditions", [])
+        # Support both possible_conditions and findings field names
+        possible_conditions = symptom_findings.get("possible_conditions") or symptom_findings.get("findings") or []
         tests               = symptom_findings.get("recommended_tests", [])
         treatments          = symptom_findings.get("suggested_treatment", [])
         next_steps          = symptom_findings.get("next_steps", [])
@@ -276,30 +255,7 @@ def generate_report(session_id: int, patient_name: str = None,
         summary             = symptom_findings.get("summary", "")
 
         if possible_conditions:
-            tdata = [[
-                Paragraph("<b>Possible Condition</b>", S["bold"]),
-                Paragraph("<b>Confidence</b>", S["bold"])
-            ]]
-            for c in possible_conditions:
-                confidence = c.get("confidence", "—")
-                conf_str = f"{confidence}%" if isinstance(confidence, (int, float)) else str(confidence)
-                tdata.append([
-                    Paragraph(c.get("condition", "—"), S["body"]),
-                    Paragraph(conf_str, S["body"])
-                ])
-            ct = Table(tdata, colWidths=[W * 0.75, W * 0.25])
-            ct.setStyle(TableStyle([
-                ("BACKGROUND",    (0, 0), (-1,  0), NAVY),
-                ("TEXTCOLOR",     (0, 0), (-1,  0), WHITE),
-                ("ROWBACKGROUNDS",(0, 1), (-1, -1), [LIGHT_BLUE, WHITE]),
-                ("GRID",          (0, 0), (-1, -1), 0.4, BORDER),
-                ("ALIGN",         (1, 0), ( 1, -1), "CENTER"),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-                ("TOPPADDING",    (0, 0), (-1, -1), 4),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ]))
-            content.append(ct)
+            content.append(_findings_table(possible_conditions, W, S, BORDER, LIGHT_BLUE, WHITE, NAVY))
             content.append(Spacer(1, 4))
 
         urgency_map = {
@@ -338,9 +294,7 @@ def generate_report(session_id: int, patient_name: str = None,
 
         content.append(Spacer(1, 6))
 
-    # ══════════════════════════════════════════════
-    # REFINED DIAGNOSIS SECTION
-    # ══════════════════════════════════════════════
+    # ── REFINED DIAGNOSIS SECTION ──
     if refined_diagnosis:
         content.append(_section_header("Refined Diagnosis — Based on Test Results", W, S,
                                        color=colors.HexColor("#1E5C2E")))
@@ -360,12 +314,12 @@ def generate_report(session_id: int, patient_name: str = None,
                 colWidths=[W]
             )
             final_box.setStyle(TableStyle([
-                ("BACKGROUND",   (0, 0), (-1, -1), colors.HexColor("#E8F5E9")),
-                ("LEFTPADDING",  (0, 0), (-1, -1), 10),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING",   (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING",(0, 0), (-1, -1), 6),
-                ("LINEABOVE",    (0, 0), (-1,  0), 2, CONFIRMED),
+                ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#E8F5E9")),
+                ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
+                ("TOPPADDING",    (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LINEABOVE",     (0, 0), (-1,  0), 2, CONFIRMED),
             ]))
             content.append(final_box)
             content.append(Spacer(1, 4))
@@ -373,9 +327,9 @@ def generate_report(session_id: int, patient_name: str = None,
         if confirmed:
             content.append(Paragraph("✅  Confirmed Conditions", S["confirmed"]))
             for c in confirmed:
-                status = c.get("status", "Confirmed")
+                status    = c.get("status", "Confirmed")
                 condition = c.get("condition", "—")
-                evidence = c.get("evidence", "")
+                evidence  = c.get("evidence", "")
                 content.append(_bullet(f"<b>{condition}</b> ({status}) — {evidence}", S["body"]))
             content.append(Spacer(1, 3))
 
@@ -383,7 +337,7 @@ def generate_report(session_id: int, patient_name: str = None,
             content.append(Paragraph("❌  Ruled Out", S["ruled_out"]))
             for r in ruled_out:
                 condition = r.get("condition", "—")
-                reason = r.get("reason", "")
+                reason    = r.get("reason", "")
                 content.append(_bullet(f"<b>{condition}</b> — {reason}", S["body"]))
             content.append(Spacer(1, 3))
 
@@ -419,9 +373,7 @@ def generate_report(session_id: int, patient_name: str = None,
 
         content.append(Spacer(1, 6))
 
-    # ══════════════════════════════════════════════
-    # DISCLAIMER + FOOTER
-    # ══════════════════════════════════════════════
+    # ── DISCLAIMER + FOOTER ──
     content.append(HRFlowable(width="100%", thickness=1, color=BORDER))
     content.append(Spacer(1, 4))
 
