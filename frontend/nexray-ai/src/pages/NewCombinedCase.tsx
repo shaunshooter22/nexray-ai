@@ -107,8 +107,10 @@ export default function NewCombinedCase() {
     setStage("idle");
   }
 
-  function handleFile(f: File) {
+  async function handleFile(f: File) {
     setFile(f);
+    const base64 = await fileToBase64(f);
+    setPreviewUrl(base64);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -242,7 +244,7 @@ export default function NewCombinedCase() {
 
                 <div className="flex flex-col gap-2">
                   <Label>X-Ray Image (optional)</Label>
-                  <FileUploadCard onFileAccepted={handleFile} previewUrl={null} />
+                  <FileUploadCard onFileAccepted={handleFile} previewUrl={previewUrl} />
                   {file && (
                     <p className="text-tiny text-text-secondary">✓ {file.name} selected</p>
                   )}
