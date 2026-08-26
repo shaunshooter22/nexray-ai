@@ -1,9 +1,5 @@
 # ============================================================
 # NexRay AI - Symptom Checker Service
-# This service takes a list of symptoms from the doctor,
-# sends them to the Claude API which acts as a medical
-# triage assistant, and returns 3 possible conditions
-# with confidence percentages and recommendations.
 # ============================================================
 
 import os
@@ -13,17 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get the Claude API key from the .env file
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
-
-# Create the Anthropic client using our API key
 client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
 
-# ============================================================
-# System prompt — sets Claude up as a medical triage
-# assistant that returns 3 possible conditions with
-# confidence percentages
-# ============================================================
 SYSTEM_PROMPT = """
 You are a medical decision-support assistant for NexRay AI, a platform used by doctors and medical staff in Ghana and West Africa.
 
@@ -52,18 +40,9 @@ You must ALWAYS respond with valid JSON in exactly this format and nothing else:
             "description": "brief description of why this condition matches the symptoms"
         }
     ],
-    "recommended_tests": [
-        "test 1",
-        "test 2"
-    ],
-    "suggested_treatment": [
-        "treatment suggestion 1",
-        "treatment suggestion 2"
-    ],
-    "next_steps": [
-        "next step 1",
-        "next step 2"
-    ],
+    "recommended_tests": ["test 1", "test 2"],
+    "suggested_treatment": ["treatment 1", "treatment 2"],
+    "next_steps": ["next step 1", "next step 2"],
     "urgency": "Emergency / Urgent / Routine",
     "disclaimer": "These are AI-generated suggestions only. Clinical judgment of the attending medical professional must be applied before any action is taken.",
     "summary": "A brief overall summary of the assessment"
@@ -81,13 +60,6 @@ Important rules:
 """
 
 def check_symptoms(symptoms: str) -> dict:
-    # --------------------------------------------------------
-    # Takes a string of symptoms from the doctor,
-    # sends them to Claude API and returns a structured
-    # dictionary with 3 possible conditions and recommendations
-    # --------------------------------------------------------
-
-    # Send the symptoms to Claude API
     message = client.messages.create(
         model="claude-haiku-4-5",
         max_tokens=1000,
@@ -100,10 +72,7 @@ def check_symptoms(symptoms: str) -> dict:
         ]
     )
 
-    # Extract the text response from Claude
     response_text = message.content[0].text
-
-    # Clean the response
     response_text = response_text.strip()
     if response_text.startswith("```json"):
         response_text = response_text[7:]
@@ -113,13 +82,10 @@ def check_symptoms(symptoms: str) -> dict:
         response_text = response_text[:-3]
     response_text = response_text.strip()
 
-    # Extract just the JSON object
     start = response_text.find("{")
     end = response_text.rfind("}") + 1
     if start != -1 and end != 0:
         response_text = response_text[start:end]
 
-    # Parse the JSON response from Claude
     result = json.loads(response_text)
-
     return result
